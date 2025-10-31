@@ -55,8 +55,13 @@
 ;;
 ;;; Code:
 
-(defcustom gptel-agents-dirs
-  (list (expand-file-name "./agents/" (file-name-directory load-file-name)))
+(require 'gptel)
+(require 'gptel-agent-tools)
+
+(defcustom gptel-agent-dirs
+  (list (expand-file-name
+         "./agents/" (file-name-directory
+                      (or load-file-name (buffer-file-name)))))
   "Agent definition directories for gptel-agent.
 
 Markdown (.md) and Org (.org) files in these directories will be scanned
@@ -81,7 +86,7 @@ for gptel sub-agent definitions by gptel-agent."
                     agent-plist)
               (when (equal name "gptel-agent")
                 (apply #'gptel-make-preset 'gptel-agent agent-plist)))))
-        gptel-agents-dirs))
+        gptel-agent-dirs))
 
 ;;; Sub-agent definition parsers for Markdown and Org
 
@@ -226,6 +231,7 @@ Signals an error if:
 
 ;;; Commands
 
+;;;###autoload
 (defun gptel-agent (&optional project-dir agent-preset)
   "Start a gptel-agent session in the current project."
   (interactive
