@@ -155,7 +155,7 @@ COUNT is the number of results to return (default 5)."
          gptel-agent--web-search-active))
   (if (>= (length gptel-agent--web-search-active) 2)
       (progn (message "Web search: waiting for turn")
-             (run-at-time 4 nil #'gptel-agent--web-search-eww
+             (run-at-time 5 nil #'gptel-agent--web-search-eww
                           tool-cb query count))
     (push (gptel-agent--fetch-with-timeout
            (concat eww-search-prefix (url-hexify-string query))
@@ -173,6 +173,7 @@ COUNT is the number of results to return (default 5)."
     (delete-char 1) (insert "?")))
 
 (defun gptel-agent--web-search-eww-callback (cb)
+  "Extract website text and run callback CB with it."
   (let* ((count 5) (results))
     (goto-char (point-min))
     (goto-char url-http-end-of-headers)
@@ -500,7 +501,7 @@ Signals:
     (error "Error: File or directory %s is not readable" path))
 
   (unless new-str-or-diff
-    (error "Required argument `new_str' missing."))
+    (error "Required argument `new_str' missing"))
 
   (if (or (eq diffp :json-false) old-str)
       ;; Replacement by Text
@@ -722,7 +723,7 @@ and optional context. Results are sorted by modification time."
 (defvar-local gptel-agent--todos nil)
 
 (defun gptel-agent-toggle-todos ()
-  "Toggle the display of the gptel-agent todo list."
+  "Toggle the display of the gptel agent todo list."
   (interactive)
   (pcase-let ((`(,prop-value . ,ov)
                (or (get-char-property-and-overlay (point) 'gptel-agent--todos)
@@ -835,7 +836,6 @@ Exactly one item should have status \"in_progress\"."
      info-ov count)))
 
 (defun gptel-agent--indicate-tool-call (fsm)
-  ";TODO: "
   (when-let* ((info (gptel-fsm-info fsm))
               (tool-use (plist-get info :tool-use))
               (ov (plist-get info :context)))
@@ -886,7 +886,7 @@ Exactly one item should have status \"in_progress\"."
         (propertize "\n" 'face '(:inherit shadow :underline t :extend t)))))))
 
 (defun gptel-agent--task (main-cb agent-type description prompt)
-  "Call a gptel-agent to do specific compound tasks.
+  "Call a gptel agent to do specific compound tasks.
 
 MAIN-CB is the main callback to return a value to the main loop.
 AGENT-TYPE is the name of the agent.
