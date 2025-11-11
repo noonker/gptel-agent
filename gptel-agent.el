@@ -58,6 +58,7 @@
 (require 'compat)
 (require 'gptel)
 (require 'gptel-agent-tools)
+(eval-when-compile (require 'cl-lib))
 
 (declare-function yaml-parse-string "yaml")
 (declare-function project-current "project")
@@ -68,33 +69,50 @@
 (defvar org-inhibit-startup)
 (defvar project-prompter)
 
+;;; User options
 (defcustom gptel-agent-dirs
   (list (expand-file-name
          "./agents/" (file-name-directory
                       (or load-file-name (buffer-file-name)))))
-  "Agent definition directories for gptel-agent.
+  "Agent definition directories for `gptel-agent'.
 
 Markdown (.md) and Org (.org) files in these directories will be scanned
-for gptel sub-agent definitions by gptel-agent."
+for gptel sub-agent definitions by `gptel-agent'."
   :type '(repeat directory)
   :group 'gptel-agent)
 
+;;; State update
 (defvar gptel-agent--agents nil)
+
+(defun gptel-agent-read-file (agent-file &optional templates)
+  "Read a preset/agent from AGENT-FILE.
+
+If TEMPLATES is-nil, read only the front-matter and do not apply
+any templates to the system prompt."
+  (if (not (and (file-readable-p agent-file)
+                (file-regular-p agent-file)))
+      (prog1 nil
+        (message "gptel-agent: File %s is not parseable" agent-file))
+    (let* ((agent-plist
+            (pcase (file-name-extension agent-file)
+              ("org" (gptel-agent-parse-org-properties
+                      agent-file nil templates))
+              ("md" (gptel-agent-parse-markdown-frontmatter
+                     agent-file nil templates))))
+           (name (plist-get agent-plist :name)))
+      (cl-remf agent-plist :name)
+      (cons name agent-plist))))
 
 (defun gptel-agent-update ()
   "Update `gptel-agent--agents' with agent presets."
   ;; First pass: discover all agents and collect their file paths
   (setq gptel-agent--agents nil)
-  (let ((agent-files nil))  ; Alist of (agent-name . file-path)
+  (let ((agent-files nil))              ; Alist of (agent-name . file-path)
     (mapc (lambda (dir)
             (dolist (agent-file (cl-delete-if-not #'file-regular-p
                                                   (directory-files dir 'full)))
-              (let* ((agent-plist
-                      (pcase (file-name-extension agent-file)
-                        ("org" (gptel-agent-parse-org-properties agent-file))
-                        ("md" (gptel-agent-parse-markdown-frontmatter agent-file))))
-                     (name (plist-get agent-plist :name)))
-                (cl-remf agent-plist :name)
+              (pcase-let ((`(,name . ,agent-plist) ;call without templates
+                           (gptel-agent-read-file agent-file)))
                 (setf (alist-get name gptel-agent--agents nil t #'equal)
                       agent-plist)
                 (push (cons name agent-file) agent-files))))
@@ -116,16 +134,8 @@ for gptel sub-agent definitions by gptel-agent."
              ;; Create templates alist
              (templates (list (cons "AGENTS" agents-list-str))))
         (when agent-file                ; Parse the agent file with templates
-          (let* ((expanded-plist
-                  (pcase (file-name-extension agent-file)
-                    ("org" (gptel-agent-parse-org-properties
-                            agent-file nil templates))
-                    ("md" (gptel-agent-parse-markdown-frontmatter
-                           agent-file nil templates)))))
-            (when expanded-plist
-              (cl-remf expanded-plist :name)
-              (setf (alist-get name gptel-agent--agents nil t #'equal)
-                    expanded-plist)))))))
+          (setf (alist-get name gptel-agent--agents nil t #'equal)
+                (cdr (gptel-agent-read-file agent-file templates)))))))
 
   ;; Update the enum for agent_task tool
   (setf (plist-get (car (gptel-tool-args (gptel-get-tool "agent_task"))) :enum)
@@ -169,7 +179,7 @@ and returns t if the key is allowed, nil otherwise.  If not provided,
 defaults to `gptel-agent-validator-default'.
 
 TEMPLATES is an optional alist of (VAR-NAME . VAR-VALUE) for template
-expansion. Template variables in the format {{VAR-NAME}} in the markdown
+expansion.  Template variables in the format {{VAR-NAME}} in the markdown
 body will be replaced with VAR-VALUE.
 
 Returns a plist with:
@@ -217,7 +227,7 @@ Signals an error if:
                 (let ((key (pop tail))
                       (val (pop tail)))
                   (pcase key
-                    ((or :pre :post) (plist-put parsed-yaml key (eval (read val))))
+                    ((or :pre :post) (plist-put parsed-yaml key (eval (read val) t)))
                     (:parents (plist-put parsed-yaml key
                                          (mapcar #'intern (ensure-list (read val)))))))))
 
@@ -247,11 +257,11 @@ symbol and returns t if the key is allowed, nil otherwise.
 If not provided, defaults to `gptel-agent-validator-default'.
 
 TEMPLATES is an optional alist of (VAR-NAME . VAR-VALUE) for template
-expansion. Template variables in the format {{VAR-NAME}} in the Org body
+expansion.  Template variables in the format {{VAR-NAME}} in the Org body
 will be replaced with VAR-VALUE.
 
 The function expects a :PROPERTIES: block at the top of the file
-(before any headlines), with keys like name, description, tools,
+ (before any headlines), with keys like name, description, tools,
 backend, model, etc. Property names are case-insensitive and will
 be converted to lowercase keyword symbols.
 
@@ -309,7 +319,7 @@ Signals an error if:
               (let ((key (pop tail))
                     (val (pop tail)))
                 (pcase key
-                  ((or :pre :post) (plist-put props-plist key (eval (read val))))
+                  ((or :pre :post) (plist-put props-plist key (eval (read val) t)))
                   (:parents (plist-put props-plist key
                                        (mapcar #'intern (ensure-list (read val)))))))))
 
@@ -326,10 +336,10 @@ Signals an error if:
 
 ;;;###autoload
 (defun gptel-agent (&optional project-dir agent-preset)
-  "Start a gptel-agent session in the current project.
+  "Start a `gptel-agent' session in the current project.
 
-With optional prefix-arg, query for PROJECT-DIR.  Load AGENT-PRESET in
-this session, which defaults to the default gptel-agent."
+With optional prefix arg, query for PROJECT-DIR.  Load AGENT-PRESET in
+this session, which defaults to the default `gptel-agent'."
   (interactive
    (list (if current-prefix-arg
              (funcall project-prompter)
