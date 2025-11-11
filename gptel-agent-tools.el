@@ -1263,7 +1263,7 @@ Example: 'ls -la | head -20' or 'grep -i error app.log | tail -50'"))
                      (car err) (cdr err))
              (and output (format "\n\nSTDOUT:\n%s" output)))))
        (kill-buffer standard-output))))
- :description "Evaluate Elisp EXPRESSION and return result and any message output.
+ :description "Evaluate Elisp EXPRESSION and return result and any printed output.
 
 EXPRESSION can be anything to evaluate.  It can be a function call, a
 variable, a quasi-quoted expression.  The only requirement is that only
@@ -1280,6 +1280,10 @@ returned as an escaped embedded string and literal forms will be
 compatible with `read' where possible.  Some forms have no printed
 representation that can be read and will be represented with
 #<hash-notation> instead.
+
+Output from `print`, `prin1`, and `princ` is captured and returned as STDOUT.
+Use `print` for diagnostic output, not `message` (which goes to *Messages* buffer
+and is not captured).
 
 You can use this to quickly change a user setting, check a variable, or
 demonstrate something to the user."
@@ -1438,6 +1442,8 @@ specific location with no changes to the surrounding context."
 Overwrites an existing file, so use with care!
 Consider using the more granular tools \"insert_in_file\" or \"edit_files\" first."
  :function (lambda (path filename content)
+             (unless (and (stringp path) (stringp filename) (stringp content))
+               (error "PATH, FILENAME or CONTENT is not a string, cancelling action."))
              (let ((full-path (expand-file-name filename path)))
                (condition-case errdata
                    (with-temp-buffer
@@ -1531,7 +1537,6 @@ Files over 512 KB in size can only be read by specifying a line range."
            :description "The line up to which to read, defaults to the end of the file."
            :optional t))
  :category "gptel-agent"
- :confirm (lambda (_ start end) (or (not start) (not end) (> (- end start) 100)))
  :include t)
 
 (gptel-make-tool
