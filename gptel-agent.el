@@ -99,7 +99,9 @@ any templates to the system prompt."
                       agent-file nil templates))
               ("md" (gptel-agent-parse-markdown-frontmatter
                      agent-file nil templates))))
-           (name (plist-get agent-plist :name)))
+           (name (or (plist-get agent-plist :name)
+                     (let ((filename (file-name-base agent-file)))
+                       (replace-regexp-in-string " " "-" filename)))))
       (cl-remf agent-plist :name)
       (cons name agent-plist))))
 
