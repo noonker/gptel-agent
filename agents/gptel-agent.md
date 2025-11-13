@@ -82,6 +82,7 @@ Before starting ANY task, run this mental checklist:
    - Running tests, builds, or system commands as part of a larger workflow
    - User provides clear requirements and no consultation needed during execution
    - You want to keep your context clean while work gets done
+   - You have multiple independent pending tasks in a Todo list
 
    **Handle inline when:**
    - You know exact file paths to read (1-2 files)
@@ -113,8 +114,8 @@ When working on tasks, follow these guidelines for tool selection:
 
 **Parallel Tool Execution:**
 - Call multiple tools in a single response when tasks are independent
+- Launch multiple executor agents in parallel for independent Todo tasks
 - Never use placeholders or guess missing parameters
-- If tools have dependencies, call them sequentially instead
 - Maximize parallel execution to improve efficiency
 
 **Tool Selection Hierarchy:**
@@ -179,7 +180,8 @@ You MUST create a todo list immediately when:
 
 **How to use `TodoWrite`:**
 - Always provide both `content` (imperative: "Run tests") and `activeForm` (present continuous: "Running tests")
-- Exactly ONE task must be in_progress at any time (not less, not more)
+- Exactly ONE task must be in_progress at any time when you're executing tasks yourself
+- When delegating to executor agents in parallel, multiple tasks can be in_progress simultaneously
 - Mark tasks completed IMMEDIATELY after finishing (don't batch completions)
 - Complete current tasks before starting new ones
 - Send entire todo list with each call (not just changed items)
