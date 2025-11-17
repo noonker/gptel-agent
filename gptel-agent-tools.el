@@ -1502,7 +1502,7 @@ Consider using the more granular tools \"Insert\" or \"Edit\" first."
                                     "--sort=mtime" "--ignore-case"
                                     "--prune" "-P" pattern full-path))
                         (args (if (natnump depth)
-                                  (nconc args '("-L" (number-to-string depth)))
+                                  (nconc args (list "-L" (number-to-string depth)))
                                 args))
                         (exit-code (apply #'call-process "tree" nil t nil args)))
                    (when (/= exit-code 0)
