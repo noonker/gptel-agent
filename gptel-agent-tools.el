@@ -956,7 +956,8 @@ CONTEXT-LINES specifies the number of lines of context to show
   around each match (0-15 inclusive, defaults to 0).
 
 Returns a string containing matches grouped by file, with line numbers
-and optional context. Results are sorted by modification time."
+and optional context.  Results are limited to 1000 or fewer matches per
+file.  Results are sorted by modification time."
   (unless (file-readable-p path)
     (error "Error: File or directory %s is not readable" path))
   (let ((grepper (or (executable-find "rg") (executable-find "grep"))))
@@ -971,7 +972,8 @@ and optional context. Results are sorted by modification time."
                                 (and (natnump context-lines)
                                      (format "--context=%d" context-lines))
                                 (and glob (format "--glob=%s" glob))
-                                ;; "--files-with-matches" "--max-count=10"
+                                ;; "--files-with-matches"
+                                "--max-count=1000"
                                 "--heading" "--line-number" "-e" regex
                                 (expand-file-name (substitute-in-file-name path)))))
                ((string= "grep" cmd)
@@ -979,6 +981,7 @@ and optional context. Results are sorted by modification time."
                                 (and (natnump context-lines)
                                      (format "--context=%d" context-lines))
                                 (and glob (format "--include=%s" glob))
+                                "--max-count=1000"
                                 "--line-number" "--regexp" regex
                                 (expand-file-name (substitute-in-file-name path)))))
                (t (error "Error: failed to identify grepper"))))
